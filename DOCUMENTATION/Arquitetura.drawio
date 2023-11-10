@@ -1,9 +1,12 @@
-<mxfile host="app.diagrams.net" modified="2023-11-09T23:33:24.806Z" agent="Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0" etag="Kl8zSloOs8p6s1GJCumK" version="22.1.0" type="device">
+<mxfile host="app.diagrams.net" modified="2023-11-10T00:01:41.867Z" agent="Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0" etag="W4OJStwts-3atctHHhFp" version="22.1.0" type="device">
   <diagram name="Página-1" id="S-PQVSaoZ4ZLTjlp8Mns">
     <mxGraphModel dx="1114" dy="586" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="0XRelH-bKSYTIwhhzhDV-27" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="40" width="400" height="550" as="geometry" />
+        </mxCell>
         <mxCell id="0XRelH-bKSYTIwhhzhDV-25" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="290" y="350" width="380" height="110" as="geometry" />
         </mxCell>
@@ -62,7 +65,7 @@
           <mxGeometry x="340" y="280" width="60" height="30" as="geometry" />
         </mxCell>
         <mxCell id="0XRelH-bKSYTIwhhzhDV-20" value="webSocket" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
-          <mxGeometry x="430" y="310" width="60" height="30" as="geometry" />
+          <mxGeometry x="430" y="280" width="60" height="30" as="geometry" />
         </mxCell>
         <mxCell id="0XRelH-bKSYTIwhhzhDV-22" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;" edge="1" parent="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
