@@ -1,6 +1,6 @@
-# SD-FINAL-PROJECT
+# Collabing Docs
 ## Descrição da aplicação
-Uma Aplicação de edição de documentos colaborativa.
+Uma Aplicação de edição de documentos de forma colaborativa.
 ### funcionalidades
 TODO
 ### Características de Sistemas Distribuidos
