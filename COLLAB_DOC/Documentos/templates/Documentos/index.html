@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title> Documentos </title>
+    </head>
+    <body>
+        Página da web padrao para a rota de Documentos
+        <input id="nada-input" type="text" size="100"><br>
+        <input id="nada-input-botao" type="button" value="Enter">
+    </body>
+    <script>
+        document.querySelector('#nada-input').focus();
+        document.querySelector('#nada-input').onkeyup = function(e) {
+            if (e.key === 'Enter') {  // enter, return
+                document.querySelector('#nada-input-botao').click();
+            }
+        };
+
+        document.querySelector('#nada-input-botao').onclick = function(e) {
+            var roomName = document.querySelector('#nada-input').value;
+            alert("vc escreveu " + roomName)
+            window.location.pathname = '/documentos/' + roomName + '/';
+        };
+    </script>
+</html>
