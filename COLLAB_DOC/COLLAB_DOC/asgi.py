@@ -15,18 +15,26 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from django.core.asgi import get_asgi_application
 from Documentos.consumers import DocumentConsumer
 
+
+from Documentos.routing import websocket_urlpatterns
+import pika
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'COLLAB_DOC.settings')
+
+django_asgi_app = get_asgi_application()
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+connection.channel().exchange_declare(exchange='documentos',
+                    exchange_type='direct')
+connection.close()
 
 application = ProtocolTypeRouter(
     {
-        "http": get_asgi_application(),
+        "http": django_asgi_app,
         # Just HTTP for now. (We can add other protocols later.)
         "websocket": AllowedHostsOriginValidator(
             AuthMiddlewareStack(
-                URLRouter([
-                    re_path(r"^ws/$", DocumentConsumer.as_asgi()),
-                ])
+                URLRouter(websocket_urlpatterns)
             )
-        )
+        ),
     }
 )
