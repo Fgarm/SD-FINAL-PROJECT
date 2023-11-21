@@ -44,6 +44,7 @@ class DocumentConsumer(WebsocketConsumer):
         
         self.channel.start_consuming()
         # https://stackoverflow.com/questions/56165657/unable-to-stop-consuming-in-pika
+        # colocar o canal pra ouvir por sla, 0.1 segundo a cada 3 segundos, é sincronia o suficiente
         print("Conexão deu certo / ouvindo fila")
         # BUG: se alguém fizer uma mudança dps de pegar o doc, antes de consumir, 
         # tem q lidar com perder um pacote
