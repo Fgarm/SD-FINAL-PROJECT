@@ -1,18 +1,50 @@
-<!-- chat/templates/chat/room.html -->
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title>Chat room</title>
+    <title>Document Edit</title>
+    <style>
+        body {
+            background-color: lightblue;
+          }
+        textarea {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            resize:none;
+            min-height: 900px;
+            width: 100%;
+            height:90%;
+            max-width:100%;
+            box-sizing: border-box;
+            display: flex;
+            user-select: none;
+            min-height:100%;
+            overflow-x: auto;
+            height: 500px;
+          }
+
+          
+        .noselect {
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            -khtml-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none;
+
+          }
+    </style>
 </head>
 <body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
+    <p id="p1">Editing Document </p>
+    <textarea id="documento_edit_texto" class="noselect" cols="100"></textarea><br>
     {{ documento_id|json_script:"documento_id" }}
     <script>
         const documento_id = JSON.parse(document.getElementById('documento_id').textContent);
-
+        document.getElementById("p1").innerHTML = "Editing Document " + documento_id + "!";
+        let version = 0;
+        const documento_texto = document.getElementById('documento_edit_texto');
         const chatSocket = new WebSocket(
             'ws://'
             + window.location.host
@@ -20,32 +52,189 @@
             + documento_id
             + '/'
         );
-
+        const client_id = (Math.floor(Math.random() * (1000001 - 1) ) + 1).toString();
+        //console.log("client_id:"+client_id);
+        chatSocket.onopen = function (e) {
+            chatSocket.send(JSON.stringify({
+                'client_id': client_id,
+                'type' : "user.signin"
+            }));
+          }
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
-        };
+            //console.log(data)
+            if(data.type == "doc.change")
+            {
+                if (data.client_id == client_id) 
+                {
+                }
+                else if (version >= parseInt(data.version))
+                {
+                    console.error("problemas de sync... estou a frente");
+                }
 
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
-
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#chat-message-submit').click();
+                else if (version + 1 != parseInt(data.version))
+                {
+                    console.error("Perdi pacotes");
+                    alert("Queda de conexão: perda de pacotes levou a dessincronização");
+                    location.reload();
+                }
+                else 
+                {
+                    version = parseInt(data.version);
+                    documento = document.querySelector('#documento_edit_texto').value
+                    // console.log(typeof(documento))
+                    start_index = data.startPos;
+                    if (data.newStartPos < start_index)
+                    {
+                        start_index = data.newStartPos;
+                    }
+                    const start_subsection = documento.slice(0, start_index);
+                    //console.log(start_subsection)
+                    const end_subsection = documento.slice(data.endPos);
+                    //console.log(end_subsection)
+                    let meio = "";
+                    if(data.data == "backspace" || data.data == "delete") { }
+                    else
+                    {
+                        meio = data.data;
+                    }
+                    // console.log(start_subsection + meio + end_subsection);
+                    document.querySelector('#documento_edit_texto').value = (start_subsection + meio + end_subsection);
+                }
+            }
+            else if (data.type == "doc.start")
+            {
+                version = parseInt(data.version);
+                document.querySelector('#documento_edit_texto').value = data.data;
             }
         };
 
-        document.querySelector('#chat-message-submit').onclick = function(e) {
+        chatSocket.onclose = function(e) {
+            document.querySelector('#documento_edit_texto').value = "";
+            console.error('Chat socket closed unexpectedly');
+        };
+
+        //document.querySelector('#chat-message-input').focus();
+        /* document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.key === 'Enter') {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
+        }; */
+
+        /* document.querySelector('#chat-message-submit').onclick = function(e) {
             const messageInputDom = document.querySelector('#chat-message-input');
             const message = messageInputDom.value;
             chatSocket.send(JSON.stringify({
                 'message': message
             }));
             messageInputDom.value = '';
-        };
-        // TODO: infelizmente acho que vou ter que fzr a sincronização com as msgs via js
+        }; */
+        // document.getElementById('documento_edit_texto').onkeydown=onKeyDown;
+        // document.getElementById('documento_edit_texto').onkeyup=onKeyUp;
+        document.querySelector('#documento_edit_texto').focus();
+        let startPos = 0;
+        let endPos = 0;
+        documento_texto.addEventListener('keyup', checkcaret); // Every character written
+        documento_texto.addEventListener('mouseup', checkcaret); // Click down
+        //documento_texto.addEventListener('touchstart', checkcaret); // Mobile
+        documento_texto.addEventListener('input', onInput); // Other input events
+        //documento_texto.addEventListener('paste', checkcaret); // Clipboard actions
+        //documento_texto.addEventListener('cut', checkcaret);
+        //documento_texto.addEventListener('mousemove', checkcaret); // Selection, dragging text
+        //documento_texto.addEventListener('select', checkcaret); // Some browsers support this event
+        // documento_texto.addEventListener('selectstart', checkcaret); // Some browsers support this event
+        
+        // setInterval(checkcaret, 1000); works, but is it needed?
+        function onInput(e) {
+            var newStartPos = documento_texto.selectionStart;
+            var newEndPos = documento_texto.selectionEnd;
+            if (event.inputType == "insertLineBreak") 
+            {
+                //console.log("novo \n");
+                version += 1;
+                chatSocket.send(JSON.stringify({
+                    'version': version,
+                    'startPos': startPos,
+                    'endPos': endPos,
+                    'newStartPos': newStartPos,
+                    'type' : 'doc.change',
+                    'client_id': client_id,
+                    'data': "   \n"
+                }));
+            }
+            if (event.inputType == "insertText") {
+                //console.log("nova letra: '" + event.data+ "'");
+                version += 1;
+                chatSocket.send(JSON.stringify({
+                    'version': version,
+                    'startPos': startPos,
+                    'endPos': endPos,
+                    'newStartPos': newStartPos,
+                    'type' : 'doc.change',
+                    'client_id': client_id,
+                    'data': event.data
+                }));
+            }
+            if (event.inputType == "deleteContentBackward") {
+                //console.log("backspace");
+                version += 1;
+                chatSocket.send(JSON.stringify({
+                    'version': version,
+                    'startPos': startPos,
+                    'endPos': endPos,
+                    'newStartPos': newStartPos,
+                    'type' : 'doc.change',
+                    'client_id': client_id,
+                    'data': "backspace"
+                    
+                }));
+            }
+            if (event.inputType == "deleteContentForward") {
+                //console.log("delete");
+                version += 1;
+                chatSocket.send(JSON.stringify({
+                    'version': version,
+                    'startPos': startPos,
+                    'endPos': endPos + 1,
+                    'newStartPos': newStartPos,
+                    'type' : 'doc.change',
+                    'client_id': client_id,
+                    'data': "delete"
+                }));
+            }
+            //console.log("old pos:" + startPos + ", " + endPos);
+            //console.log("new pos:" + newStartPos + ", " + newEndPos);
+            startPos = newStartPos;
+            endPos = newEndPos;
+
+            // enviar pelo websocket a mudança para os clientes
+        }
+
+        function checkcaret() {
+            var key = event.keyCode || event.charCode;
+            var newStartPos = documento_texto.selectionStart;
+            var newEndPos = documento_texto.selectionEnd;
+            //console.log("old pos:" + startPos + ", " + endPos);
+            //console.log("new pos:" + newStartPos + ", " + newEndPos);
+            startPos = newStartPos;
+            endPos = newEndPos;
+        }
+        //react differently to diferent causes of caret movement
+        function checkKeyPress(event) {
+            var key = window.event.keyCode;
+            // If the user has pressed enter
+            //console.log("keyPress" + key);
+            var keyCode = event.hasOwnProperty('which') ? event.which : event.keyCode;
+            const newPos = documento_texto.selectionStart;
+            if (newPos !== pos) {
+                //console.log('change to ' + newPos + "char: " + keyCode);
+                
+                pos = newPos;
+            }
+            //Now check
+        }
+
     </script>
 </body>
 </html>

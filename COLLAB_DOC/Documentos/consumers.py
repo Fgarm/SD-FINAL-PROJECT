@@ -1,76 +1,100 @@
 import json
-import pika
 
+from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
+from .models import Documento
+from .serializers import DocumentoSerializer
 
 class DocumentConsumer(WebsocketConsumer):
-    documento_id = "asdfg"
-    connection = ""
-    channel = ""
-    def callback(ch, method, properties, body):
-        # enviar esse dado pelo websocket pro cliente
-        print("Recebeu do RabbitMQ")
-        self.send(text_data=json.dumps({"message": body}))
-        print("Enviou Websocket")
-        # print(f" [x] {method.routing_key}:{body}")
-        
-    
+    client_id = ""
     def connect(self):
-        # self.user = self.scope["user"]
-        print("Começou a conectar")
-        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-        self.channel = self.connection.channel()
+        self.documento_id = self.scope["url_route"]["kwargs"]["documento_id"]
+        self.documento_group_id = f"doc_{self.documento_id}"
+
+        # Join room group
+        async_to_sync(self.channel_layer.group_add)(
+            self.documento_group_id, self.channel_name
+        )
+
+        self.accept()
+        version = 1
+        newEndPos = 0
+        data = ""
+        try:
+            doc = Documento.objects.get(id=self.documento_id)
+            version = doc.versao
+            data = doc.conteudo
+            newEndPos = len(doc.conteudo)
+        # verificando se o user selecionado existe
+        except Documento.DoesNotExist:
+            dict = {}
+            dict["id"] = self.documento_id
+            dict["versao"] = version
+            dict["conteudo"] = ""
+            serializer = DocumentoSerializer(data=dict)
+            if serializer.is_valid():
+                serializer.save()
+            # Enviando o documento no estado inicial
+        self.send(text_data=json.dumps(
+                    {
+                    'version' : version,
+                    'type' : 'doc.start',
+                    'data': data
+                    }))
         
-        # declarada em outro lugar, mas vai que precisa aqui
-        # channel.exchange_declare(exchange='documentos',
-        #                 exchange_type='direct')
         
-        #declara uma fila
-        result = self.channel.queue_declare(queue='', exclusive=True)
-        print("Declaro Fila")
-        # binda essa fila pra ouvir coisas desse doc
-        self.channel.queue_bind(exchange='documentos',
-                       queue=result.method.queue,
-                       routing_key=self.documento_id)
-        
-        print("Bindo Fila")
-        self.channel.basic_consume(
-        queue=result.method.queue, on_message_callback=self.callback, auto_ack=True)
-        print("Detalhou fila")
-        
-        self.accept() # deixar por ultimo, e aceitar só se o user for valido pro doc
-        print("Iniciou a conexão websocket")
-        # TODO: pegar e enviar o estado atual do documento
-        
-        self.channel.start_consuming()
-        # https://stackoverflow.com/questions/56165657/unable-to-stop-consuming-in-pika
-        # colocar o canal pra ouvir por sla, 0.1 segundo a cada 3 segundos, é sincronia o suficiente
-        print("Conexão deu certo / ouvindo fila")
-        # BUG: se alguém fizer uma mudança dps de pegar o doc, antes de consumir, 
-        # tem q lidar com perder um pacote
-        # creio q vou sempre reenviar o pedaço, ent sla
-        
+
 
     def disconnect(self, close_code):
-        print("Desconectou")
-        # TODO: liberar locks nos docs?
-        # fechar a queue (aparentemente não precisa)
-        pass
+        # Leave room group
+        async_to_sync(self.channel_layer.group_discard)(
+            self.documento_group_id, self.channel_name
+        )
 
+    # Receive message from WebSocket
     def receive(self, text_data):
-        # aqui a gente recebe as as mudanças que o cliente fez nos docs
-        print("Começou a receber websocket")
         text_data_json = json.loads(text_data)
-        message = text_data_json["message"]
-        
-        # e tem que redirecionar pra os outros clientes no doc elas
-        channel.basic_publish(exchange='documentos',
-                      routing_key=self.documento_id,
-                      body=message)
-        print("Publicou no RabbitMQ")
+        if text_data_json["type"] == "user.signin":
+            if self.client_id == "":
+                self.client_id = text_data_json["client_id"]
+                # print(self.client_id)
+            
+        if text_data_json["type"] == "doc.change":
+            doc = Documento.objects.get(id=self.documento_id)
+            #print(text_data_json)
+            # Enviar as mudanças para serem salvas no db
+            if text_data_json["version"] == doc.versao + 1:
+                doc.versao += 1
+                documento = doc.conteudo
+                # console.log(typeof(documento))
+                start_index = text_data_json['newStartPos']
+                if text_data_json['startPos'] < start_index:
+                    start_index = text_data_json['startPos']
+                start_subsection = documento[:start_index]
+                #print(start_subsection)
+                end_subsection = documento[text_data_json['endPos']:]
+                #print(end_subsection)
+                meio = ""
+                if text_data_json['data'] == "backspace" or text_data_json['data'] == "delete":
+                    pass
+                else:
+                    meio = text_data_json['data']
+                
+                doc.conteudo = start_subsection + meio + end_subsection
+                doc.save()
+                # Send message to room group
+                async_to_sync(self.channel_layer.group_send)(
+                    self.documento_group_id, text_data_json
+                )
+            
 
-        # aqui a gente envia de volta pro nosso cliente
-        # da pra enviar alguma outra coisa. (talvez os pedaços que mudaram)
-        # n precisa pq o próprio nosso RabbitMQ envia
-        # self.send(text_data=json.dumps({"message": message})) 
-        # print("Publicou no websocket")
+            
+            
+
+    # Receive message from room group
+    def doc_change(self, event):
+        # message = event["message"]
+
+        # Send message to WebSocket
+        # print(event)
+        self.send(text_data=json.dumps(event))

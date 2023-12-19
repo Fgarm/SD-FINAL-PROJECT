@@ -23,10 +23,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-jidnjgoed98+rp5qy=q^e+fu0pl-n-@7=$b9v-em9$ku55+=)y'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+ADMIN_ENABLED = False
 
 # Application definition
 
@@ -57,6 +58,15 @@ ROOT_URLCONF = 'COLLAB_DOC.urls'
 
 
 ASGI_APPLICATION = "COLLAB_DOC.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 TEMPLATES = [
     {
